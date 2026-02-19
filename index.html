@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simpsons Cluedo - 2º ESO</title>
+    <title>Simpsons Cluedo Online - 2º ESO</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         :root { --bg-color: #0b0b0b; --text-color: #fff; --accent-color: #ffd90f; --panel-bg: #1a1a1a; --border-color: #444; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', sans-serif; }
         
-        /* Lobby */
+        /* Lobby Screen */
         #lobby-screen { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; max-width: 600px;}
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
         input { padding: 12px; border-radius: 5px; border: none; width: 250px; font-size: 1rem; color: #000; text-align: center; }
         
-        /* Layout & Board Zoom Fix */
+        /* Layout & Board Resize */
         #game-container { display: none; width: 100vw; height: 100vh; display: flex; flex-direction: row; }
         #board-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #222; padding: 20px; box-sizing: border-box; overflow: hidden; }
-        
         #board-wrapper { 
             position: relative; 
             width: 100%; 
@@ -26,62 +25,55 @@
             aspect-ratio: 24 / 25; 
             background-image: url('tablero.jpg'); 
             background-size: 100% 100%; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.8); 
+            box-shadow: 0 0 25px rgba(0,0,0,0.8); 
         }
         
+        /* Grid and Labels */
         #grid-overlay { display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: repeat(25, 1fr); width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 20; }
-        .cell { border: 1px solid rgba(255, 255, 255, 0.05); cursor: pointer; }
+        .cell { border: 1px solid rgba(255, 255, 255, 0.04); cursor: pointer; }
         .cell:hover { background: rgba(255, 217, 15, 0.2); }
         
-        /* --- FIX: ROOM LABELS --- */
-        #room-labels-layer { position: absolute; inset: 0; pointer-events: none; z-index: 30; } /* High z-index to be above grid */
+        #room-labels-layer { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
         .room-label { 
-            position: absolute; 
-            color: #fff; 
-            font-size: 0.75rem; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            background: rgba(0, 0, 0, 0.7); 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            border: 1px solid var(--accent-color);
-            transform: translate(-50%, -50%);
-            white-space: nowrap;
-            pointer-events: none;
+            position: absolute; color: #fff; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; 
+            background: rgba(0, 0, 0, 0.7); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--accent-color);
+            transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
         }
 
-        /* UI Sidebar */
-        #ui-sidebar { width: 380px; min-width: 380px; background: var(--panel-bg); border-left: 2px solid var(--border-color); padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        /* Sidebar UI */
+        #ui-sidebar { width: 360px; min-width: 360px; background: var(--panel-bg); border-left: 2px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
         .section { background: #111; padding: 12px; border-radius: 8px; border: 1px solid #333; }
-        .section h3 { margin-top: 0; margin-bottom: 8px; color: var(--accent-color); font-size: 0.85em; text-transform: uppercase; }
+        .section h3 { margin-top: 0; margin-bottom: 8px; color: var(--accent-color); font-size: 0.8em; text-transform: uppercase; border-bottom: 1px solid #333; }
 
         /* Tokens */
-        .player-token { width: 3.8%; height: 3.8%; position: absolute; transform: translate(-50%, -50%); transition: 0.4s ease-out; border-radius: 50%; border: 2px solid #fff; background-size: cover; z-index: 25; box-shadow: 0 4px 8px #000; }
+        .player-token { width: 3.5%; height: 3.5%; position: absolute; transform: translate(-50%, -50%); transition: 0.4s ease-out; border-radius: 50%; border: 2px solid #fff; z-index: 25; background-size: cover; box-shadow: 0 2px 5px #000; }
         
-        /* Moving Dice */
-        #dice-container { font-size: 4em; text-align: center; color: var(--accent-color); display: flex; justify-content: center; gap: 10px; }
+        /* Animated Dice */
+        #dice-container { font-size: 4em; text-align: center; color: var(--accent-color); display: flex; justify-content: center; gap: 10px; margin: 10px 0; }
         .die { display: inline-block; }
-        @keyframes roll {
+        @keyframes rollEffect {
             0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.2); }
+            50% { transform: rotate(180deg) scale(1.2); color: #fff; }
             100% { transform: rotate(360deg) scale(1); }
         }
 
-        select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; font-weight: bold; }
-        #log { height: 100px; background: #000; overflow-y: auto; font-size: 0.8em; padding: 10px; border: 1px solid #333; color: #0f0; margin-top: 10px; }
+        select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
+        button { background: var(--accent-color); color: #000; text-transform: uppercase; }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+        #log { height: 100px; background: #000; overflow-y: auto; font-size: 0.75em; padding: 8px; border: 1px solid #333; color: #0f0; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div id="lobby-screen">
-        <h1 style="color:var(--accent-color);">SIMPSONS CLUEDO</h1>
+        <h1 style="color:var(--accent-color); font-size: 2.5em;">SIMPSONS CLUEDO ONLINE</h1>
         <div id="setup-step">
-            <input type="text" id="room-id" placeholder="Enter Room Name">
-            <button onclick="joinRoom()" style="width:auto; background:var(--accent-color);">Enter</button>
-            <button onclick="resetRoomFromLobby()" style="width:auto; background:#e74c3c; color:white;">Reset</button>
+            <input type="text" id="room-id" placeholder="Enter Room Name (e.g. class2A)">
+            <button onclick="joinRoom()" style="width: auto; padding: 12px 30px;">JOIN</button>
+            <button onclick="resetRoom()" style="width: auto; padding: 12px 30px; background: #e74c3c; color: white;">RESET ROOM</button>
         </div>
         <div id="char-step" style="display:none;">
-            <h3>Select your character:</h3>
+            <h3>Pick your character:</h3>
             <div id="char-btns" class="btn-group"></div>
         </div>
     </div>
@@ -95,31 +87,31 @@
         </div>
 
         <div id="ui-sidebar">
-            <h2 id="turn-indicator" style="text-align:center; margin:0; font-size:1.2em;">Loading...</h2>
+            <div id="turn-indicator" style="text-align: center; padding: 10px; background: #222; font-weight: bold; border-radius: 5px;">Waiting for players...</div>
             
             <div class="section">
-                <h3>Current Location</h3>
-                <div id="loc-tracker" style="font-size: 1.2em; color: var(--accent-color); font-weight: 900; text-align: center;">Hallway</div>
+                <h3>Location</h3>
+                <div id="loc-tracker" style="font-size: 1.2em; color: var(--accent-color); text-align: center; font-weight: bold;">Hallway</div>
             </div>
 
             <div class="section">
                 <h3>Movement</h3>
                 <div id="dice-container"><span class="die" id="die1">⚀</span><span class="die" id="die2">⚀</span></div>
-                <button id="roll-btn" onclick="triggerDiceRoll()">Roll Dice</button>
+                <button id="roll-btn" onclick="rollDice()">Roll Moving Dice</button>
+            </div>
+
+            <div class="section">
+                <h3>Notebook</h3>
+                <div id="notebook-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7em;"></div>
             </div>
 
             <div class="section">
                 <h3>Actions</h3>
                 <select id="guess-suspect"></select>
                 <select id="guess-weapon"></select>
-                <button onclick="makeSuggestion()" style="background:#3498db; color:white;">Make Suggestion</button>
-                <button onclick="makeAccusation()" style="background:#e74c3c; color:white;">Final Accusation</button>
-                <button id="end-turn-btn" onclick="endTurn()" style="background:#444; color:white;">End Turn</button>
-            </div>
-
-            <div class="section">
-                <h3>Notebook</h3>
-                <div id="notebook-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.75em;"></div>
+                <button onclick="suggest()" style="background: #3498db; color: white;">Suggest</button>
+                <button onclick="accuse()" style="background: #e74c3c; color: white;">Accuse</button>
+                <button id="end-btn" onclick="endTurn()" style="background: #444; color: white; margin-top: 10px;">End Turn</button>
             </div>
 
             <div id="log"></div>
@@ -127,10 +119,16 @@
     </div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyCxN2d4RZyt9Q5JOKZxT7pJ5NBirAoxEn4", databaseURL: "https://cluedo-821bd-default-rtdb.firebaseio.com", projectId: "cluedo-821bd" };
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCxN2d4RZyt9Q5JOKZxT7pJ5NBirAoxEn4",
+        databaseURL: "https://cluedo-821bd-default-rtdb.firebaseio.com",
+        projectId: "cluedo-821bd"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // --- GAME DATA ---
     const diceUnicode = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     const characters = [
         { name: "Homer", color: "#ffd90f", startX: 2, startY: 2, img: 'homer.png' },
@@ -145,7 +143,6 @@
         rooms: ["Cafeteria", "Lab", "Art's class", "2ºA", "Teacher's lounge", "ICT room", "Gym", "Library", "English department", "Hall", "Bathroom", "Cinema room", "Annex"]
     };
 
-    // Coordinates mapping
     const roomZones = [
         { name: "Cafeteria", x1: 0, y1: 0, x2: 4, y2: 6 },
         { name: "Lab", x1: 6, y1: 0, x2: 11, y2: 5 },
@@ -162,14 +159,16 @@
         { name: "Annex", x1: 21, y1: 10, x2: 23, y2: 14 }
     ];
 
-    let roomPath = ""; let myChar = ""; let localState = {}; let currentRoll = 0; let hasMovedThisTurn = false;
+    let roomPath = ""; let myName = ""; let localState = {}; let rollResult = 0; let hasMoved = false;
 
+    // --- LOBBY LOGIC ---
     function joinRoom() {
         const id = document.getElementById('room-id').value.trim();
         if (!id) return;
         roomPath = 'cluedo_rooms/' + id;
         document.getElementById('setup-step').style.display = 'none';
         document.getElementById('char-step').style.display = 'block';
+        
         db.ref(roomPath).on('value', (snap) => {
             localState = snap.val() || {};
             if (localState.started) startGameUI();
@@ -177,35 +176,42 @@
         });
     }
 
-    function resetRoomFromLobby() {
+    function resetRoom() {
         const id = document.getElementById('room-id').value.trim();
-        if (id && confirm("Delete room data?")) db.ref('cluedo_rooms/' + id).remove();
+        if (id && confirm("Delete all room data?")) db.ref('cluedo_rooms/' + id).remove().then(() => location.reload());
     }
 
     function renderLobby() {
-        const area = document.getElementById('char-btns');
-        area.innerHTML = "";
+        const container = document.getElementById('char-btns');
+        container.innerHTML = "";
         characters.forEach(c => {
             const isTaken = localState.players && localState.players[c.name];
             const btn = document.createElement('button');
             btn.textContent = c.name;
             btn.style.background = c.color;
-            btn.disabled = isTaken || myChar !== "";
-            btn.onclick = () => { myChar = c.name; db.ref(roomPath + '/players/' + c.name).set({ eliminated: false }); };
-            area.appendChild(btn);
+            btn.style.width = "120px";
+            btn.disabled = isTaken || myName !== "";
+            btn.onclick = () => { myName = c.name; db.ref(roomPath + '/players/' + c.name).set({active: true}); };
+            container.appendChild(btn);
         });
-        if (Object.keys(localState.players || {}).length >= 2 && myChar && !localState.started) {
-            const start = document.createElement('button');
-            start.textContent = "START GAME"; start.style.background = "#2ecc71";
-            start.onclick = hostInit; area.appendChild(start);
+        
+        if (Object.keys(localState.players || {}).length >= 2 && myName && !localState.started) {
+            const startBtn = document.createElement('button');
+            startBtn.textContent = "START GAME"; startBtn.style.background = "#2ecc71";
+            startBtn.onclick = initGame; container.appendChild(startBtn);
         }
     }
 
-    function hostInit() {
-        const solution = { suspect: gameData.suspects[0], weapon: gameData.weapons[0], room: gameData.rooms[0] };
-        db.ref(roomPath).update({ started: true, turn: 0, solution, positions: characters.reduce((acc, c) => { acc[c.name] = {x: c.startX, y: c.startY}; return acc; }, {}), logs: ["Game Started"] });
+    function initGame() {
+        const solution = { suspect: "Homer", weapon: "Saxophone", room: "Gym" }; // Simplification for demo
+        db.ref(roomPath).update({
+            started: true, turn: 0, solution,
+            positions: characters.reduce((acc, c) => { acc[c.name] = {x: c.startX, y: c.startY}; return acc; }, {}),
+            logs: ["Game Started!"]
+        });
     }
 
+    // --- GAME ENGINE ---
     function startGameUI() {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'flex';
@@ -215,7 +221,6 @@
         updateUI();
     }
 
-    // --- NEW: ROOM LABELS ---
     function drawRoomLabels() {
         const layer = document.getElementById('room-labels-layer');
         layer.innerHTML = "";
@@ -223,24 +228,24 @@
             const label = document.createElement('div');
             label.className = 'room-label';
             label.textContent = z.name;
-            // Center calculation
             label.style.left = (((z.x1 + z.x2 + 1) / 2) * (100 / 24)) + "%";
             label.style.top = (((z.y1 + z.y2 + 1) / 2) * (100 / 25)) + "%";
             layer.appendChild(label);
         });
     }
 
-    function triggerDiceRoll() {
-        if (characters[localState.turn].name !== myChar || hasMovedThisTurn) return;
+    function rollDice() {
+        if (characters[localState.turn].name !== myName || hasMoved) return;
         const d1 = document.getElementById('die1'); const d2 = document.getElementById('die2');
-        d1.style.animation = d2.style.animation = "roll 0.2s infinite";
+        d1.style.animation = d2.style.animation = "rollEffect 0.2s infinite";
+        
         setTimeout(() => {
             d1.style.animation = d2.style.animation = "none";
             const r1 = Math.floor(Math.random()*6)+1; const r2 = Math.floor(Math.random()*6)+1;
             d1.textContent = diceUnicode[r1-1]; d2.textContent = diceUnicode[r2-1];
-            currentRoll = r1 + r2;
-            addLog(`${myChar} rolled a ${currentRoll}`);
-        }, 1000);
+            rollResult = r1 + r2;
+            addLog(`${myName} rolled a ${rollResult}`);
+        }, 800);
     }
 
     function renderBoard() {
@@ -250,13 +255,13 @@
             const cell = document.createElement('div');
             cell.className = 'cell';
             const x = i % 24; const y = Math.floor(i / 24);
-            cell.onclick = () => handleMove(x, y);
+            cell.onclick = () => move(x, y);
             grid.appendChild(cell);
         }
-        updateTokens();
+        syncTokens();
     }
 
-    function updateTokens() {
+    function syncTokens() {
         document.querySelectorAll('.player-token').forEach(t => t.remove());
         characters.forEach(c => {
             const pos = localState.positions?.[c.name];
@@ -269,44 +274,37 @@
             token.style.backgroundColor = c.color;
             document.getElementById('board-wrapper').appendChild(token);
             
-            // --- FIX: RECOGNIZE ROOM ---
-            if (c.name === myChar) {
-                const room = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2);
-                document.getElementById('loc-tracker').textContent = room ? room.name : "Hallway";
+            if (c.name === myName) {
+                const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2);
+                document.getElementById('loc-tracker').textContent = r ? r.name : "Hallway";
             }
         });
     }
 
-    function handleMove(x, y) {
-        if (currentRoll === 0) return;
-        const pos = localState.positions[myChar];
-        if (Math.abs(pos.x - x) + Math.abs(pos.y - y) <= currentRoll) {
-            db.ref(roomPath + '/positions/' + myChar).set({ x, y });
-            currentRoll = 0; hasMovedThisTurn = true;
+    function move(x, y) {
+        if (rollResult === 0) return;
+        const pos = localState.positions[myName];
+        const dist = Math.abs(pos.x - x) + Math.abs(pos.y - y);
+        if (dist <= rollResult) {
+            db.ref(roomPath + '/positions/' + myName).set({x, y});
+            rollResult = 0; hasMoved = true;
         }
     }
 
-    function makeSuggestion() {
-        const room = document.getElementById('loc-tracker').textContent;
-        if (room === "Hallway") return alert("Must be in a room to suggest!");
-        addLog(`${myChar} suggests ${document.getElementById('guess-suspect').value} in the ${room}`);
-    }
-
-    function makeAccusation() {
-        const room = document.getElementById('loc-tracker').textContent;
-        if (room === "Hallway") return alert("Must be in a room to accuse!");
-        const s = document.getElementById('guess-suspect').value;
-        if (s === localState.solution.suspect) alert("CORRECT!"); else alert("WRONG!");
-    }
-
     function endTurn() {
-        db.ref(roomPath).update({ turn: (localState.turn + 1) % 4 });
-        hasMovedThisTurn = false; currentRoll = 0;
+        let next = (localState.turn + 1) % 4;
+        while (!localState.players?.[characters[next].name]) next = (next + 1) % 4;
+        db.ref(roomPath).update({ turn: next });
+        hasMoved = false; rollResult = 0;
     }
 
     function updateUI() {
-        const isMyTurn = characters[localState.turn].name === myChar;
-        document.getElementById('turn-indicator').textContent = isMyTurn ? "🚨 YOUR TURN" : `${characters[localState.turn].name}'s Turn`;
+        const isMyTurn = characters[localState.turn].name === myName;
+        const indicator = document.getElementById('turn-indicator');
+        indicator.textContent = isMyTurn ? "🚨 YOUR TURN!" : `${characters[localState.turn].name}'s Turn`;
+        indicator.style.color = isMyTurn ? var(--accent-color) : "#fff";
+        document.getElementById('roll-btn').disabled = !isMyTurn || hasMoved;
+        document.getElementById('end-btn').disabled = !isMyTurn;
         document.getElementById('log').innerHTML = (localState.logs || []).slice().reverse().map(l => `<div>> ${l}</div>`).join('');
         renderNotebook();
     }
@@ -319,18 +317,32 @@
     }
 
     function renderNotebook() {
-        const container = document.getElementById('notebook-container');
-        if (container.children.length > 0) return;
+        const cont = document.getElementById('notebook-container');
+        if (cont.children.length > 0) return;
         [...gameData.suspects, ...gameData.weapons, ...gameData.rooms].forEach(item => {
-            container.innerHTML += `<div><input type="checkbox"> ${item}</div>`;
+            cont.innerHTML += `<div><input type="checkbox"> ${item}</div>`;
         });
     }
 
     function addLog(msg) {
         const logs = [...(localState.logs || []), msg];
-        if (logs.length > 10) logs.shift();
+        if (logs.length > 12) logs.shift();
         db.ref(roomPath + '/logs').set(logs);
+    }
+
+    function suggest() {
+        const r = document.getElementById('loc-tracker').textContent;
+        if (r === "Hallway") return alert("Enter a room first!");
+        addLog(`🕵️ ${myName} suggests: ${document.getElementById('guess-suspect').value} in the ${r}`);
+    }
+
+    function accuse() {
+        const r = document.getElementById('loc-tracker').textContent;
+        if (r === "Hallway") return alert("Enter a room first!");
+        const s = document.getElementById('guess-suspect').value;
+        if (s === localState.solution.suspect) alert("🏆 YOU WON!"); else alert("❌ WRONG!");
     }
 </script>
 </body>
 </html>
+
