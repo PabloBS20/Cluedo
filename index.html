@@ -3,75 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simpsons Cluedo Online</title>
+    <title>Simpsons Cluedo - 2º ESO</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
-        :root { --bg-color: #000; --text-color: #fff; --accent-color: #ffd90f; --panel-bg: #1a1a1a; --border-color: #444; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-color); font-family: sans-serif; }
+        :root { --bg-color: #0b0b0b; --text-color: #fff; --accent-color: #ffd90f; --panel-bg: #1a1a1a; --border-color: #444; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Lobby Styles */
         #lobby-screen { position: fixed; inset: 0; background: #000; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
-        input { padding: 12px; border-radius: 5px; border: none; width: 250px; font-size: 1rem; color: #000; }
-        #game-container { display: none; width: 100vw; height: 100vh; }
-        #board-wrapper { position: relative; flex-grow: 1; background-image: url('tablero.jpg'); background-size: 100% 100%; }
-        #grid-overlay { display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: repeat(25, 1fr); width: 100%; height: 100%; position: absolute; }
-        .cell { border: 0.1px solid rgba(255,255,255,0.05); cursor: pointer; }
-        #ui-sidebar { width: 350px; background: var(--panel-bg); border-left: 2px solid var(--border-color); padding: 15px; overflow-y: auto; }
-        .section { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
-        .player-token { width: 40px; height: 40px; position: absolute; transform: translate(-50%, -50%); transition: 0.4s; border-radius: 50%; border: 2px solid #fff; background-position: center; background-size: cover; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; max-width: 600px;}
+        input { padding: 12px; border-radius: 5px; border: none; width: 250px; font-size: 1rem; color: #000; text-align: center; }
+        
+        /* Main Layout */
+        #game-container { display: none; width: 100vw; height: 100vh; display: flex; flex-direction: row; }
+        
+        /* Board Area - Responsive Zoom */
+        #board-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; background: #222; padding: 20px; box-sizing: border-box; overflow: hidden; }
+        #board-wrapper { 
+            position: relative; 
+            width: 100%; 
+            max-width: calc((100vh - 40px) * 24 / 25); 
+            aspect-ratio: 24 / 25; 
+            background-image: url('tablero.jpg'); 
+            background-size: 100% 100%; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.8); 
+        }
+        
+        #grid-overlay { display: grid; grid-template-columns: repeat(24, 1fr); grid-template-rows: repeat(25, 1fr); width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; }
+        .cell { border: 1px solid rgba(255, 255, 255, 0.05); cursor: pointer; transition: background 0.2s; }
+        .cell:hover { background: rgba(255, 217, 15, 0.3); } 
+        
+        /* --- NEW: ROOM NAMES STYLES --- */
+        #room-labels-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+        .room-label { 
+            position: absolute; 
+            color: rgba(255,255,255,0.9); 
+            font-size: clamp(0.5rem, 1vw, 0.8rem); 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: rgba(0, 0, 0, 0.6); 
+            box-sizing: border-box; 
+            padding: 4px; 
+            text-align: center; 
+            border-radius: 4px; 
+            text-shadow: 1px 1px 2px #000; 
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%); /* Center on the calculated point */
+        }
+
+        /* UI Sidebar */
+        #ui-sidebar { width: 380px; min-width: 380px; background: var(--panel-bg); border-left: 2px solid var(--border-color); padding: 15px; overflow-y: auto; z-index: 50; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+        .section { background: #111; padding: 12px; border-radius: 8px; border: 1px solid #333; }
+        .section h3 { margin-top: 0; margin-bottom: 10px; color: var(--accent-color); text-transform: uppercase; font-size: 0.9em; border-bottom: 1px solid #333; padding-bottom: 5px; }
+
+        /* Tokens */
+        .player-token { width: 3.5%; height: 3.5%; position: absolute; transform: translate(-50%, -50%); transition: 0.5s cubic-bezier(0.25, 0.8, 0.25, 1); border-radius: 50%; border: 2px solid #fff; background-position: center; background-size: cover; box-shadow: 0 5px 15px rgba(0,0,0,0.9); z-index: 20; }
         .eliminated { opacity: 0.3; filter: grayscale(1); }
-        button { padding: 10px; background: var(--accent-color); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; }
+        
+        /* Buttons */
+        button { padding: 12px; background: var(--accent-color); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; text-transform: uppercase; }
         button:disabled { background: #555; cursor: not-allowed; color: #888; }
-        .card { background: #333; padding: 5px 10px; border-radius: 4px; border: 1px solid #555; font-size: 0.8em; margin: 2px; display: inline-block; }
-        #log { height: 100px; background: #000; overflow-y: auto; font-size: 0.8em; padding: 5px; border: 1px solid #333; color: #0f0; }
-        .notepad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.85em; }
-        .notepad-item { display: flex; align-items: center; gap: 8px; padding: 3px; }
-        .notepad-category { grid-column: span 2; color: var(--accent-color); border-bottom: 1px solid #444; margin-top: 10px; font-size: 0.9em; text-transform: uppercase; }
+        
+        /* --- NEW: MOVING DICE ANIMATION --- */
+        #dice-container { font-size: 4em; text-align: center; color: var(--accent-color); display: flex; justify-content: center; gap: 15px; user-select: none; padding: 10px; }
+        .die { display: inline-block; transition: transform 0.1s; }
+        @keyframes roll {
+            0% { transform: rotate(0deg) translate(0, 0) scale(1); }
+            25% { transform: rotate(90deg) translate(5px, -5px) scale(1.1); }
+            50% { transform: rotate(180deg) translate(-5px, 5px) scale(1.2); }
+            75% { transform: rotate(270deg) translate(5px, 5px) scale(1.1); }
+            100% { transform: rotate(360deg) translate(0, 0) scale(1); }
+        }
+
+        #log { height: 120px; background: #000; overflow-y: auto; font-size: 0.8em; padding: 10px; border: 1px solid #333; color: #0f0; border-radius: 5px; font-family: monospace; }
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="lobby-screen">
-        <h1 style="color:var(--accent-color);">SIMPSONS CLUEDO ONLINE</h1>
+        <h1 style="color:var(--accent-color); font-size: 3em; margin-bottom: 10px;">SIMPSONS CLUEDO</h1>
         <div id="setup-step">
             <input type="text" id="room-id" placeholder="Enter Room Name">
             <button onclick="joinRoom()">Enter Room</button>
+            <button onclick="resetRoomFromLobby()" style="background: #e74c3c; color: white; margin-left: 10px;">Reset Room</button>
         </div>
         <div id="char-step" style="display:none;">
-            <h3 id="lobby-instruction">Pick your character:</h3>
+            <h3 id="lobby-instruction">Select your character:</h3>
             <div id="char-btns" class="btn-group"></div>
-            <p id="wait-msg" style="margin-top:20px;"></p>
-            <button onclick="db.ref(roomPath).remove(); location.reload();" style="background:#e74c3c; color:white; margin-top:30px; font-size:10px;">RESET ROOM</button>
+            <p id="wait-msg" style="margin-top:20px; color: #888;"></p>
         </div>
     </div>
 
     <div id="game-container">
-        <div id="board-wrapper"><div id="grid-overlay"></div></div>
+        <div id="board-area">
+            <div id="board-wrapper">
+                <div id="room-labels-layer"></div> <div id="grid-overlay"></div>
+            </div>
+        </div>
+
         <div id="ui-sidebar">
-            <h2 id="turn-indicator">Waiting...</h2>
+            <h2 id="turn-indicator" style="text-align:center; padding: 10px; background: #222; border-radius: 5px;">Waiting...</h2>
+            
             <div class="section">
                 <h3>Movement</h3>
-                <div id="dice-val" style="font-size: 2em; text-align: center;">?</div>
-                <button id="roll-btn" onclick="rollDice()" style="width:100%">Roll Dice</button>
+                <div id="dice-container">
+                    <span class="die" id="die1">⚀</span>
+                    <span class="die" id="die2">⚀</span>
+                </div>
+                <button id="roll-btn" onclick="triggerDiceRoll()" style="width:100%">Roll Moving Dice</button>
             </div>
-            <div class="section">
-                <h3>Suggestion</h3>
-                <select id="guess-suspect" style="width:100%; margin-bottom:5px;"></select>
-                <select id="guess-weapon" style="width:100%; margin-bottom:5px;"></select>
-                <button onclick="makeSuggestion()" style="width:100%">Make Suggestion</button>
-            </div>
+
             <div class="section">
                 <h3>Detective Notebook</h3>
-                <div id="notebook-container" class="notepad-grid"></div>
+                <div id="notebook-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.8em;"></div>
             </div>
+
             <div class="section">
-                <h3>Your Private Hand</h3>
-                <div id="my-hand"></div>
+                <h3>Your Hand</h3>
+                <div id="my-hand" style="display: flex; flex-wrap: wrap; gap: 5px;"></div>
             </div>
+
             <div class="section">
-                <button style="background:red; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
-                <button id="end-turn-btn" onclick="endTurn()" style="background:#444; color:white; margin-top:5px; width:100%">End Turn</button>
+                <button style="background:#e74c3c; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
+                <button id="end-turn-btn" onclick="endTurn()" style="width:100%; margin-top:5px; background:#444; color:white;">End Turn</button>
             </div>
+            
             <div id="log"></div>
         </div>
     </div>
@@ -85,6 +146,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    const diceUnicode = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
     const characters = [
         { name: "Homer", color: "#ffd90f", startX: 2, startY: 2, img: 'homer.png' },
         { name: "Moe", color: "#4dabf7", startX: 11, startY: 3, img: 'moe.png' },
@@ -98,32 +160,42 @@
         rooms: ["Cafeteria", "Lab", "Art's class", "2ºA", "Teacher's lounge", "ICT room", "Gym", "Library", "English department", "Hall", "Bathroom", "Cinema room", "Annex"]
     };
 
+    // Adjusted room coordinates for index 1 board
     const roomZones = [
-        { name: "Cafeteria", x1: 0, y1: 0, x2: 5, y2: 5 }, { name: "2ºA", x1: 8, y1: 0, x2: 15, y2: 6 },
-        { name: "Teacher's lounge", x1: 18, y1: 0, x2: 23, y2: 5 }, { name: "ICT room", x1: 0, y1: 8, x2: 6, y2: 12 },
-        { name: "Lab", x1: 0, y1: 14, x2: 6, y2: 17 }, { name: "Annex", x1: 10, y1: 14, x2: 14, y2: 17 }, 
-        { name: "Gym", x1: 17, y1: 8, x2: 23, y2: 12 }, { name: "Library", x1: 17, y1: 14, x2: 23, y2: 18 },
-        { name: "English department", x1: 0, y1: 19, x2: 6, y2: 24 }, { name: "Hall", x1: 9, y1: 19, x2: 14, y2: 24 },
-        { name: "Bathroom", x1: 17, y1: 20, x2: 23, y2: 24 }, { name: "Art's class", x1: 7, y1: 9, x2: 10, y2: 12 },
-        { name: "Cinema room", x1: 13, y1: 9, x2: 16, y2: 12 }
+        { name: "Cafeteria", x1: 0, y1: 0, x2: 4, y2: 6 },
+        { name: "Lab", x1: 6, y1: 0, x2: 11, y2: 5 },
+        { name: "Art's class", x1: 13, y1: 0, x2: 17, y2: 5 },
+        { name: "2ºA", x1: 19, y1: 0, x2: 23, y2: 6 },
+        { name: "Teacher's lounge", x1: 0, y1: 8, x2: 7, y2: 16 },
+        { name: "ICT room", x1: 13, y1: 8, x2: 17, y2: 14 },
+        { name: "Gym", x1: 19, y1: 9, x2: 23, y2: 15 },
+        { name: "Library", x1: 0, y1: 18, x2: 4, y2: 24 },
+        { name: "English department", x1: 6, y1: 18, x2: 12, y2: 24 },
+        { name: "Hall", x1: 14, y1: 17, x2: 23, y2: 24 },
+        { name: "Bathroom", x1: 15, y1: 9, x2: 17, y2: 12 },
+        { name: "Cinema room", x1: 9, y1: 8, x2: 11, y2: 12 },
+        { name: "Annex", x1: 21, y1: 10, x2: 23, y2: 14 }
     ];
 
     let roomPath = ""; let myChar = ""; let localState = {}; let currentRoll = 0; let hasMovedThisTurn = false;
 
     function joinRoom() {
-        const id = document.getElementById('room-id').value;
+        const id = document.getElementById('room-id').value.trim();
         if (!id) return;
         roomPath = 'cluedo_rooms/' + id;
         document.getElementById('setup-step').style.display = 'none';
         document.getElementById('char-step').style.display = 'block';
         db.ref(roomPath).on('value', (snap) => {
             localState = snap.val() || {};
-            if (localState.started) {
-                startGameUI();
-            } else {
-                renderLobby();
-            }
+            if (localState.started) startGameUI();
+            else renderLobby();
         });
+    }
+
+    function resetRoomFromLobby() {
+        const id = document.getElementById('room-id').value.trim();
+        if (!id) return alert("Enter room name.");
+        if(confirm("Reset room?")) db.ref('cluedo_rooms/' + id).remove().then(() => alert("Reset successful."));
     }
 
     function renderLobby() {
@@ -132,52 +204,83 @@
         characters.forEach(c => {
             const btn = document.createElement('button');
             btn.textContent = c.name;
+            btn.style.backgroundColor = c.color;
             const isTaken = localState.players && localState.players[c.name];
             btn.disabled = isTaken || myChar !== "";
-            btn.onclick = () => selectChar(c.name);
+            btn.onclick = () => { myChar = c.name; db.ref(roomPath + '/players/' + c.name).set({ eliminated: false }); };
             area.appendChild(btn);
         });
-        if (myChar !== "") document.getElementById('lobby-instruction').textContent = "Selected: " + myChar;
         const active = localState.players ? Object.keys(localState.players) : [];
-        document.getElementById('wait-msg').textContent = `${active.length} Players joined.`;
         if (active.length >= 2 && !localState.started && myChar !== "") {
             const startBtn = document.createElement('button');
             startBtn.textContent = "START GAME";
             startBtn.style.background = "#2ecc71";
-            startBtn.style.display = "block";
             startBtn.style.marginTop = "20px";
             startBtn.onclick = hostInit;
             area.appendChild(startBtn);
         }
     }
 
-    function selectChar(name) {
-        myChar = name;
-        db.ref(roomPath + '/players/' + name).set({ eliminated: false });
-    }
-
     function hostInit() {
-        const solution = { suspect: "Smithers", weapon: "Book", room: "English department" };
-        let cards = [...gameData.suspects, ...gameData.weapons, ...gameData.rooms]
-            .filter(c => c !== solution.suspect && c !== solution.weapon && c !== solution.room);
-        cards.sort(() => Math.random() - 0.5);
+        const solution = { suspect: "Smithers", weapon: "Book", room: "Library" };
+        let cards = [...gameData.suspects, ...gameData.weapons, ...gameData.rooms].filter(c => c !== solution.suspect && c !== solution.weapon && c !== solution.room).sort(() => Math.random() - 0.5);
         let hands = {};
         const players = Object.keys(localState.players);
         players.forEach(p => hands[p] = []);
         cards.forEach((card, idx) => hands[players[idx % players.length]].push(card));
-        
-        let firstTurn = characters.findIndex(c => localState.players[c.name]);
-        db.ref(roomPath).update({
-            started: true, turn: firstTurn, solution: solution, hands: hands,
-            positions: characters.reduce((acc, c) => { acc[c.name] = {x: c.startX, y: c.startY}; return acc; }, {}),
-            logs: ["Game Started!"]
-        });
+        db.ref(roomPath).update({ started: true, turn: 0, solution, hands, positions: characters.reduce((acc, c) => { acc[c.name] = {x: c.startX, y: c.startY}; return acc; }, {}), logs: ["Game Started!"] });
     }
 
     function startGameUI() {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'flex';
-        setupDropdowns(); renderBoard(); renderSidebar(); renderNotebook();
+        renderBoard(); 
+        renderSidebar(); 
+        renderNotebook();
+        drawRoomLabels(); // CALLING ROOM NAMES DRAWING
+    }
+
+    // --- LOGIC FOR ROOM NAMES ---
+    function drawRoomLabels() {
+        const layer = document.getElementById('room-labels-layer');
+        layer.innerHTML = "";
+        roomZones.forEach(z => {
+            const label = document.createElement('div');
+            label.className = 'room-label';
+            label.textContent = z.name;
+            // Center label in the middle of the room coordinates
+            label.style.left = (((z.x1 + z.x2 + 1) / 2) * (100 / 24)) + "%";
+            label.style.top = (((z.y1 + z.y2 + 1) / 2) * (100 / 25)) + "%";
+            layer.appendChild(label);
+        });
+    }
+
+    // --- LOGIC FOR MOVING DICE ---
+    function triggerDiceRoll() {
+        if (characters[localState.turn].name !== myChar || hasMovedThisTurn) return;
+        document.getElementById('roll-btn').disabled = true;
+        const d1 = document.getElementById('die1');
+        const d2 = document.getElementById('die2');
+        
+        d1.style.animation = "roll 0.15s infinite linear";
+        d2.style.animation = "roll 0.15s infinite linear reverse";
+
+        let rolls = 0;
+        const interval = setInterval(() => {
+            d1.textContent = diceUnicode[Math.floor(Math.random() * 6)];
+            d2.textContent = diceUnicode[Math.floor(Math.random() * 6)];
+            if (++rolls > 10) {
+                clearInterval(interval);
+                d1.style.animation = "none";
+                d2.style.animation = "none";
+                const r1 = Math.floor(Math.random() * 6) + 1;
+                const r2 = Math.floor(Math.random() * 6) + 1;
+                d1.textContent = diceUnicode[r1-1];
+                d2.textContent = diceUnicode[r2-1];
+                currentRoll = r1 + r2;
+                addLog(`${myChar} rolled a ${currentRoll}`);
+            }
+        }, 80);
     }
 
     function renderBoard() {
@@ -208,99 +311,47 @@
         });
     }
 
-    function renderSidebar() {
-        const turnIdx = localState.turn || 0;
-        const activeChar = characters[turnIdx].name;
-        const isMyTurn = activeChar === myChar;
-        document.getElementById('turn-indicator').textContent = isMyTurn ? "YOUR TURN" : `${activeChar}'s Turn`;
-        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn;
-        document.getElementById('end-turn-btn').disabled = !isMyTurn;
-        document.getElementById('my-hand').innerHTML = (localState.hands?.[myChar] || []).map(c => `<span class="card">${c}</span>`).join('');
-        document.getElementById('log').innerHTML = (localState.logs || []).slice().reverse().map(l => `<div>> ${l}</div>`).join('');
-    }
-
-    function rollDice() {
-        currentRoll = (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1);
-        document.getElementById('dice-val').textContent = currentRoll;
-        document.getElementById('roll-btn').disabled = true;
-    }
-
     function handleMove(x, y) {
-        if (currentRoll === 0 || characters[localState.turn].name !== myChar) return;
+        if (currentRoll === 0) return;
         const pos = localState.positions[myChar];
         if (Math.abs(pos.x - x) + Math.abs(pos.y - y) <= currentRoll) {
             db.ref(roomPath + '/positions/' + myChar).set({ x, y });
-            addLog(`${myChar} moved.`);
             currentRoll = 0; hasMovedThisTurn = true;
+            addLog(`${myChar} moved.`);
         }
-    }
-
-    function makeSuggestion() {
-        if (characters[localState.turn].name !== myChar) return alert("Not your turn!");
-        const pos = localState.positions[myChar];
-        const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2)?.name;
-        if (!r) return alert("Must be in a room!");
-        const s = document.getElementById('guess-suspect').value;
-        const w = document.getElementById('guess-weapon').value;
-        addLog(`${myChar} suggests: ${s} / ${w} / ${r}`);
-        if (localState.positions[s]) db.ref(roomPath + '/positions/' + s).set({ x: pos.x, y: pos.y });
     }
 
     function endTurn() {
-        if (characters[localState.turn].name !== myChar) return;
         let next = (localState.turn + 1) % 4;
-        // Logic to skip characters that are NOT human players OR are eliminated
         while (!localState.players?.[characters[next].name] || localState.players?.[characters[next].name]?.eliminated) {
             next = (next + 1) % 4;
-            if (next === localState.turn) break;
         }
         db.ref(roomPath).update({ turn: next });
-        hasMovedThisTurn = false; document.getElementById('dice-val').textContent = "?";
+        hasMovedThisTurn = false;
+        currentRoll = 0;
+    }
+
+    function renderSidebar() {
+        const turnIdx = localState.turn || 0;
+        const isMyTurn = characters[turnIdx].name === myChar;
+        document.getElementById('turn-indicator').textContent = isMyTurn ? "🚨 YOUR TURN" : `${characters[turnIdx].name}'s Turn`;
+        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn;
+        document.getElementById('my-hand').innerHTML = (localState.hands?.[myChar] || []).map(c => `<span style="background:#333; padding:5px; border-radius:4px; border:1px solid gold; font-size:0.8em;">${c}</span>`).join(' ');
+        document.getElementById('log').innerHTML = (localState.logs || []).slice().reverse().map(l => `<div>> ${l}</div>`).join('');
     }
 
     function renderNotebook() {
         const container = document.getElementById('notebook-container');
-        const cats = [{ title: "Suspects", items: gameData.suspects }, { title: "Weapons", items: gameData.weapons }, { title: "Rooms", items: gameData.rooms }];
-        let html = "";
-        cats.forEach(cat => {
-            html += `<div class="notepad-category">${cat.title}</div>`;
-            cat.items.forEach(item => {
-                const key = `note-${roomPath}-${myChar}-${item}`;
-                const chk = localStorage.getItem(key) === 'true' ? 'checked' : '';
-                html += `<div class="notepad-item"><input type="checkbox" ${chk} onclick="localStorage.setItem('${key}', this.checked)"><label>${item}</label></div>`;
-            });
-        });
-        container.innerHTML = html;
-    }
-
-    function setupDropdowns() {
-        const s = document.getElementById('guess-suspect');
-        const w = document.getElementById('guess-weapon');
-        if (s.options.length > 0) return;
-        gameData.suspects.forEach(i => s.innerHTML += `<option>${i}</option>`);
-        gameData.weapons.forEach(i => w.innerHTML += `<option>${i}</option>`);
-    }
-
-    function makeAccusation() {
-        const pos = localState.positions[myChar];
-        const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2)?.name;
-        if (!r) return alert("Must be in a room!");
-        const s = document.getElementById('guess-suspect').value;
-        const w = document.getElementById('guess-weapon').value;
-        if (s === localState.solution.suspect && w === localState.solution.weapon && r === localState.solution.room) {
-            alert("WINNER!"); db.ref(roomPath).update({ started: false, logs: [`${myChar} WON!`] });
-        } else {
-            alert("WRONG! Eliminated.");
-            db.ref(roomPath + '/players/' + myChar + '/eliminated').set(true);
-            endTurn();
-        }
+        const items = [...gameData.suspects, ...gameData.weapons, ...gameData.rooms];
+        container.innerHTML = items.map(item => `<div><input type="checkbox"> ${item}</div>`).join('');
     }
 
     function addLog(msg) {
-        const newLogs = [...(localState.logs || []), msg];
-        if (newLogs.length > 10) newLogs.shift();
-        db.ref(roomPath + '/logs').set(newLogs);
+        const logs = [...(localState.logs || []), msg];
+        if (logs.length > 10) logs.shift();
+        db.ref(roomPath + '/logs').set(logs);
     }
 </script>
 </body>
 </html>
+
