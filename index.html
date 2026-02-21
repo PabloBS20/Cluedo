@@ -19,30 +19,26 @@
         #ui-sidebar { width: 350px; background: var(--panel-bg); border-left: 2px solid var(--border-color); padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
         .section { background: #111; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
         
-        /* Token Styles */
         .player-token { width: 40px; height: 40px; position: absolute; transform: translate(-50%, -50%); transition: 0.4s; border-radius: 50%; border: 2px solid #fff; background-position: center; background-size: cover; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 10;}
         .weapon-token { width: 25px; height: 25px; position: absolute; transform: translate(-50%, -50%); transition: 0.4s; border-radius: 5px; background: #555; border: 1px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 0 5px rgba(0,0,0,0.8); z-index: 5;}
         .eliminated { opacity: 0.3; filter: grayscale(1); }
         
-        button { padding: 10px; background: var(--accent-color); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; margin: 2px; }
-        button:disabled { background: #555 !important; cursor: not-allowed; color: #888 !important; }
+        button { padding: 10px; background: var(--accent-color); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; }
+        button:disabled { background: #555; cursor: not-allowed; color: #888; }
         .card { background: #333; padding: 5px 10px; border-radius: 4px; border: 1px solid #555; font-size: 0.8em; margin: 2px; display: inline-block; }
-        .public-card { background: #2b5581; border-color: #4c8fd1; }
         #log { flex-grow: 1; min-height: 80px; background: #000; overflow-y: auto; font-size: 0.75em; padding: 5px; border: 1px solid #333; color: #0f0; }
         
-        /* Updated Notebook Styles */
+        /* Unicode Dice Styles */
+        .dice-wrapper { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 10px; }
+        .die { font-size: 3.5rem; color: #fff; background: #222; border: 2px solid #444; border-radius: 10px; width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
+        #dice-total { font-size: 1.2rem; color: var(--accent-color); font-weight: bold; margin-bottom: 5px; text-align: center; }
+
         #notebook-container { max-height: 180px; overflow-y: auto; padding-right: 5px; }
         .notepad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 0.75em; }
         .notepad-item { cursor: pointer; padding: 3px 5px; border-radius: 3px; background: #222; transition: 0.2s; }
         .notepad-item:hover { background: #333; }
         .notepad-item.crossed { text-decoration: line-through; color: #777; background: #111; }
         .notepad-category { grid-column: span 2; color: var(--accent-color); border-bottom: 1px solid #444; margin-top: 5px; font-size: 0.85em; text-transform: uppercase; padding-bottom: 2px;}
-        
-        /* Dice Styles */
-        .dice { font-size: 3.5rem; color: #fff; text-shadow: 0 0 5px rgba(255,255,255,0.5); width: 50px; text-align: center;}
-        
-        /* Suggestion Panel */
-        #suggestion-panel { background: #4a2121; border-color: #ff5555; display: none; }
     </style>
 </head>
 <body>
@@ -65,45 +61,31 @@
         <div id="board-wrapper"><div id="grid-overlay"></div></div>
         <div id="ui-sidebar">
             <h2 id="turn-indicator" style="margin-top:0;">Waiting...</h2>
-            
-            <div id="suggestion-panel" class="section">
-                <h3 style="margin-top:0; color:#ff7777;">Active Suggestion</h3>
-                <p id="sugg-text" style="font-size: 0.85em;"></p>
-                <div id="sugg-actions"></div>
-            </div>
-
             <div class="section">
                 <h3 style="margin-top:0;">Movement</h3>
-                <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 5px;">
-                    <div id="die1" class="dice">⚀</div>
-                    <div id="die2" class="dice">⚀</div>
+                <div id="dice-total">Roll the dice!</div>
+                <div class="dice-wrapper">
+                    <div id="die1" class="die">⚀</div>
+                    <div id="die2" class="die">⚀</div>
                 </div>
                 <button id="roll-btn" onclick="rollDice()" style="width:100%">Roll Dice</button>
             </div>
-            
             <div class="section">
                 <h3 style="margin-top:0;">Suggestion</h3>
                 <select id="guess-suspect" style="width:100%; margin-bottom:5px;"></select>
                 <select id="guess-weapon" style="width:100%; margin-bottom:5px;"></select>
-                <button id="sugg-btn" onclick="makeSuggestion()" style="width:100%">Make Suggestion</button>
+                <button onclick="makeSuggestion()" style="width:100%">Make Suggestion</button>
             </div>
-            
             <div class="section">
                 <h3 style="margin-top:0;">Detective Notebook</h3>
                 <div id="notebook-container" class="notepad-grid"></div>
             </div>
-            
             <div class="section">
                 <h3 style="margin-top:0;">Your Hand</h3>
                 <div id="my-hand"></div>
-                <div id="public-cards-container" style="display:none; margin-top: 10px; border-top: 1px solid #444; padding-top: 5px;">
-                    <h4 style="margin:0 0 5px 0; font-size: 0.8em; color: #4c8fd1;">Publicly Revealed Cards</h4>
-                    <div id="public-hand"></div>
-                </div>
             </div>
-            
             <div class="section" style="margin-bottom: 5px;">
-                <button id="accuse-btn" style="background:red; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
+                <button style="background:red; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
                 <button id="end-turn-btn" onclick="endTurn()" style="background:#444; color:white; margin-top:5px; width:100%">End Turn</button>
             </div>
             <div id="log"></div>
@@ -145,6 +127,7 @@
     ];
 
     let roomPath = ""; let myChar = ""; let localState = {}; let currentRoll = 0; let hasMovedThisTurn = false;
+    let lastAlertTimestamp = 0;
 
     function joinRoom() {
         const id = document.getElementById('room-id').value;
@@ -155,12 +138,11 @@
         
         db.ref(roomPath).on('value', (snap) => {
             localState = snap.val() || {};
-
-            if (localState.started) {
-                startGameUI();
-            } else {
-                renderLobby();
+            if (localState.latestAlert && localState.latestAlert.ts > lastAlertTimestamp) {
+                lastAlertTimestamp = localState.latestAlert.ts;
+                alert(localState.latestAlert.msg);
             }
+            if (localState.started) { startGameUI(); } else { renderLobby(); }
         });
     }
 
@@ -195,48 +177,45 @@
     }
 
     function hostInit() {
-        // Solution Setup
-        const solSuspect = gameData.suspects[Math.floor(Math.random() * gameData.suspects.length)];
-        const solWeapon = gameData.weapons[Math.floor(Math.random() * gameData.weapons.length)];
-        const solRoom = gameData.rooms[Math.floor(Math.random() * gameData.rooms.length)];
-        const solution = { suspect: solSuspect, weapon: solWeapon, room: solRoom };
+        // STATIC SOLUTION
+        const solution = { suspect: "Smithers", weapon: "Book", room: "English department" };
         
-        // Prepare Decks (excluding solution cards)
-        let sDeck = gameData.suspects.filter(c => c !== solution.suspect).sort(() => Math.random() - 0.5);
-        let wDeck = gameData.weapons.filter(c => c !== solution.weapon).sort(() => Math.random() - 0.5);
-        let rDeck = gameData.rooms.filter(c => c !== solution.room).sort(() => Math.random() - 0.5);
+        // Categorized remaining cards for distribution
+        let sCards = gameData.suspects.filter(c => c !== solution.suspect).sort(() => Math.random() - 0.5);
+        let wCards = gameData.weapons.filter(c => c !== solution.weapon).sort(() => Math.random() - 0.5);
+        let rCards = gameData.rooms.filter(c => c !== solution.room).sort(() => Math.random() - 0.5);
 
-        const players = Object.keys(localState.players);
-        const P = players.length;
         let hands = {};
+        const players = Object.keys(localState.players);
         players.forEach(p => hands[p] = []);
-        let publicCards = [];
 
-        // Distribute completely evenly
-        function dealDeck(deck) {
-            let perPlayer = Math.floor(deck.length / P);
-            for(let i=0; i<P; i++) {
-                hands[players[i]].push(...deck.splice(0, perPlayer));
-            }
-            publicCards.push(...deck); // remainders become public knowledge
-        }
+        // Give each player at least 1 Suspect, 1 Weapon, and 1 Room
+        players.forEach(p => {
+            if(sCards.length > 0) hands[p].push(sCards.pop());
+            if(wCards.length > 0) hands[p].push(wCards.pop());
+            if(rCards.length > 0) hands[p].push(rCards.pop());
+        });
 
-        dealDeck(sDeck);
-        dealDeck(wDeck);
-        dealDeck(rDeck);
+        // Distribute remaining cards normally
+        let remaining = [...sCards, ...wCards, ...rCards].sort(() => Math.random() - 0.5);
+        remaining.forEach((card, idx) => hands[players[idx % players.length]].push(card));
         
-        // Randomly distribute weapons to different rooms
         let weaponPositions = {};
         const shuffledRooms = [...gameData.rooms].sort(() => Math.random() - 0.5);
         gameData.weapons.forEach((w, idx) => {
             const rName = shuffledRooms[idx];
             const rZone = roomZones.find(z => z.name === rName);
-            if (rZone) weaponPositions[w] = { x: Math.floor((rZone.x1 + rZone.x2)/2), y: Math.floor((rZone.y1 + rZone.y2)/2) };
+            if (rZone) {
+                weaponPositions[w] = { 
+                    x: Math.floor((rZone.x1 + rZone.x2) / 2), 
+                    y: Math.floor((rZone.y1 + rZone.y2) / 2) 
+                };
+            }
         });
 
         let firstTurn = characters.findIndex(c => localState.players[c.name]);
         db.ref(roomPath).update({
-            started: true, turn: firstTurn, solution: solution, hands: hands, publicCards: publicCards,
+            started: true, turn: firstTurn, solution: solution, hands: hands,
             positions: characters.reduce((acc, c) => { acc[c.name] = {x: c.startX, y: c.startY}; return acc; }, {}),
             weaponPositions: weaponPositions, logs: ["Game Started!"]
         });
@@ -274,15 +253,13 @@
             token.style.backgroundColor = c.color;
             document.getElementById('board-wrapper').appendChild(token);
         });
-
         if (localState.weaponPositions) {
             Object.entries(localState.weaponPositions).forEach(([weapon, pos]) => {
                 const token = document.createElement('div');
                 token.className = 'weapon-token';
                 token.style.left = `calc(${(pos.x + 0.5)} * (100% / 24))`;
                 token.style.top = `calc(${(pos.y + 0.5)} * (100% / 25))`;
-                token.title = weapon; 
-                token.innerText = "🔪"; 
+                token.title = weapon; token.innerText = "🔪";
                 document.getElementById('board-wrapper').appendChild(token);
             });
         }
@@ -292,87 +269,40 @@
         const turnIdx = localState.turn || 0;
         const activeChar = characters[turnIdx].name;
         const isMyTurn = activeChar === myChar;
-        const isGameBlocked = !!localState.suggestion;
-
         document.getElementById('turn-indicator').textContent = isMyTurn ? "YOUR TURN" : `${activeChar}'s Turn`;
-        
-        // Disable normal actions if a suggestion is active
-        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn || isGameBlocked;
-        document.getElementById('end-turn-btn').disabled = !isMyTurn || isGameBlocked;
-        document.getElementById('sugg-btn').disabled = !isMyTurn || isGameBlocked;
-        document.getElementById('accuse-btn').disabled = !isMyTurn || isGameBlocked;
-
-        // Render Hands
+        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn;
+        document.getElementById('end-turn-btn').disabled = !isMyTurn;
         document.getElementById('my-hand').innerHTML = (localState.hands?.[myChar] || []).map(c => `<span class="card">${c}</span>`).join('');
-        
-        if (localState.publicCards && localState.publicCards.length > 0) {
-            document.getElementById('public-cards-container').style.display = 'block';
-            document.getElementById('public-hand').innerHTML = localState.publicCards.map(c => `<span class="card public-card">${c}</span>`).join('');
-        }
-
-        // Render Logs
         document.getElementById('log').innerHTML = (localState.logs || []).slice().reverse().map(l => `<div>> ${l}</div>`).join('');
-        
-        renderSuggestionPanel();
-    }
-
-    function renderSuggestionPanel() {
-        const sugg = localState.suggestion;
-        const panel = document.getElementById('suggestion-panel');
-        if (!sugg) { panel.style.display = 'none'; return; }
-        
-        panel.style.display = 'block';
-        const st = document.getElementById('sugg-text');
-        const act = document.getElementById('sugg-actions');
-        
-        if (sugg.status === 'pending') {
-            st.textContent = `Waiting for ${sugg.responder} to disprove...`;
-            if (sugg.responder === myChar) {
-                const overlap = (localState.hands[myChar] || []).filter(c => c===sugg.suspect || c===sugg.weapon || c===sugg.room);
-                if (overlap.length > 0) {
-                    act.innerHTML = `<p style="margin:5px 0; color:#fff;">Select a card to show:</p>` + 
-                        overlap.map(c => `<button onclick="disproveWith('${c}')">${c}</button>`).join('');
-                } else {
-                    act.innerHTML = `<button onclick="passDisprove()" style="background:#555; color:white;">I cannot disprove</button>`;
-                }
-            } else { act.innerHTML = ""; }
-        } else if (sugg.status === 'disproved') {
-            st.textContent = `${sugg.disprover} disproved the suggestion!`;
-            if (sugg.suggester === myChar) {
-                act.innerHTML = `<p style="color:var(--accent-color);">They showed you: <b>${sugg.card}</b></p>
-                                 <button onclick="clearSuggestion()" style="width:100%">Acknowledge & Continue</button>`;
-            } else { act.innerHTML = `<p style="font-size:0.8em; color:#aaa;">(Only the suggester sees the card)</p>`; }
-        } else if (sugg.status === 'failed') {
-            st.textContent = `No one could disprove the suggestion.`;
-            if (sugg.suggester === myChar) {
-                act.innerHTML = `<button onclick="clearSuggestion()" style="width:100%">Acknowledge & Continue</button>`;
-            } else { act.innerHTML = ""; }
-        }
     }
 
     function rollDice() {
         document.getElementById('roll-btn').disabled = true;
         const d1 = document.getElementById('die1');
         const d2 = document.getElementById('die2');
+        const totalDisp = document.getElementById('dice-total');
         let rolls = 0;
         
+        // UNICODE DICE ANIMATION logic
         const anim = setInterval(() => {
             d1.textContent = diceFaces[Math.floor(Math.random() * 6)];
             d2.textContent = diceFaces[Math.floor(Math.random() * 6)];
+            totalDisp.textContent = "Rolling...";
             rolls++;
             if (rolls > 15) {
                 clearInterval(anim);
-                let v1 = Math.floor(Math.random() * 6);
-                let v2 = Math.floor(Math.random() * 6);
-                d1.textContent = diceFaces[v1];
-                d2.textContent = diceFaces[v2];
-                currentRoll = (v1 + 1) + (v2 + 1);
+                const r1 = Math.floor(Math.random() * 6);
+                const r2 = Math.floor(Math.random() * 6);
+                d1.textContent = diceFaces[r1];
+                d2.textContent = diceFaces[r2];
+                currentRoll = (r1 + 1) + (r2 + 1);
+                totalDisp.textContent = "Result: " + currentRoll;
             }
-        }, 60);
+        }, 70);
     }
 
     function handleMove(x, y) {
-        if (currentRoll === 0 || characters[localState.turn].name !== myChar || localState.suggestion) return;
+        if (currentRoll === 0 || characters[localState.turn].name !== myChar) return;
         const pos = localState.positions[myChar];
         if (Math.abs(pos.x - x) + Math.abs(pos.y - y) <= currentRoll) {
             db.ref(roomPath + '/positions/' + myChar).set({ x, y });
@@ -381,53 +311,19 @@
         }
     }
 
-    function getNextPlayer(currentPlayerName) {
-        const activeChars = characters.filter(c => localState.players[c.name] && !localState.players[c.name].eliminated).map(c => c.name);
-        let idx = activeChars.indexOf(currentPlayerName);
-        return activeChars[(idx + 1) % activeChars.length];
-    }
-
     function makeSuggestion() {
-        if (characters[localState.turn].name !== myChar) return;
+        if (characters[localState.turn].name !== myChar) return alert("Not your turn!");
         const pos = localState.positions[myChar];
         const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2)?.name;
-        if (!r) return alert("Must be inside a room!");
-        
+        if (!r) return alert("Must be in a room!");
         const s = document.getElementById('guess-suspect').value;
         const w = document.getElementById('guess-weapon').value;
-        
+        const suggestionMsg = `🚨 SUGGESTION: ${myChar} thinks it was ${s} with the ${w} in the ${r}!`;
         if (localState.positions[s]) db.ref(roomPath + '/positions/' + s).set({ x: pos.x, y: pos.y });
         if (localState.weaponPositions && localState.weaponPositions[w]) db.ref(roomPath + '/weaponPositions/' + w).set({ x: pos.x, y: pos.y });
-        
-        addLog(`🚨 SUGGESTION: ${myChar} suggests ${s}, ${w}, ${r}`);
-        
-        const responder = getNextPlayer(myChar);
-        if (responder === myChar) {
-            db.ref(roomPath + '/suggestion').set({ suggester: myChar, status: 'failed' });
-        } else {
-            db.ref(roomPath + '/suggestion').set({
-                suggester: myChar, responder: responder, suspect: s, weapon: w, room: r, status: 'pending'
-            });
-        }
+        addLog(suggestionMsg);
+        db.ref(roomPath + '/latestAlert').set({ msg: suggestionMsg, ts: Date.now() });
     }
-
-    function disproveWith(card) {
-        db.ref(roomPath + '/suggestion').update({ status: 'disproved', disprover: myChar, card: card });
-        addLog(`${myChar} disproved the suggestion.`);
-    }
-
-    function passDisprove() {
-        const next = getNextPlayer(myChar);
-        if (next === localState.suggestion.suggester) {
-            db.ref(roomPath + '/suggestion').update({ status: 'failed' });
-            addLog(`No one was able to disprove the suggestion.`);
-        } else {
-            db.ref(roomPath + '/suggestion').update({ responder: next });
-            addLog(`${myChar} passed on disproving.`);
-        }
-    }
-
-    function clearSuggestion() { db.ref(roomPath + '/suggestion').remove(); }
 
     function endTurn() {
         if (characters[localState.turn].name !== myChar) return;
@@ -437,9 +333,10 @@
             if (next === localState.turn) break;
         }
         db.ref(roomPath).update({ turn: next });
-        hasMovedThisTurn = false; 
-        document.getElementById('die1').textContent = "⚀"; 
+        hasMovedThisTurn = false;
+        document.getElementById('die1').textContent = "⚀";
         document.getElementById('die2').textContent = "⚀";
+        document.getElementById('dice-total').textContent = "Roll the dice!";
     }
 
     function toggleNote(key) {
@@ -476,21 +373,17 @@
         if (!r) return alert("Must be in a room!");
         const s = document.getElementById('guess-suspect').value;
         const w = document.getElementById('guess-weapon').value;
-        
         if (s === localState.solution.suspect && w === localState.solution.weapon && r === localState.solution.room) {
             alert("WINNER!"); db.ref(roomPath).update({ started: false, logs: [`${myChar} WON!`] });
         } else {
             db.ref(roomPath + '/players/' + myChar + '/eliminated').set(true);
-            let activeCount = Object.keys(localState.players).filter(p => p !== myChar && !localState.players[p].eliminated).length;
-
-            if (activeCount === 0) {
+            let active = 0;
+            for (let p in localState.players) { if (p !== myChar && !localState.players[p].eliminated) active++; }
+            if (active === 0) {
                 const sol = localState.solution;
-                alert(`GAME OVER! Everyone guessed wrong.\nThe correct answer was:\n${sol.suspect} with the ${sol.weapon} in the ${sol.room}.`);
-                db.ref(roomPath).update({ started: false, logs: [`Everyone eliminated! Solution: ${sol.suspect}, ${sol.weapon}, ${sol.room}`] });
-            } else {
-                alert("WRONG ACCUSATION! You have been eliminated.");
-                endTurn();
-            }
+                alert(`GAME OVER! Everyone guessed wrong.\nThe solution was: ${sol.suspect}, ${sol.weapon}, ${sol.room}`);
+                db.ref(roomPath).update({ started: false });
+            } else { alert("WRONG ACCUSATION! You are eliminated."); endTurn(); }
         }
     }
 
@@ -502,6 +395,9 @@
 </script>
 </body>
 </html>
+
+
+
 
 
 
