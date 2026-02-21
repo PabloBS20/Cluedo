@@ -220,13 +220,22 @@
         let remaining = [...sCards, ...wCards, ...rCards].sort(() => Math.random() - 0.5);
         remaining.forEach((card, idx) => hands[players[idx % players.length]].push(card));
         
-        let weaponPositions = {};
-        const shuffledRooms = [...gameData.rooms].sort(() => Math.random() - 0.5);
+       let weaponPositions = {};
+        
+        // Exclude Gym and Library, and ensure Cafeteria and Hall are included
+        const mandatoryRooms = ["Cafeteria", "Hall"];
+        const otherEligibleRooms = gameData.rooms.filter(r => 
+            !mandatoryRooms.includes(r) && r !== "Gym" && r !== "Library"
+        ).sort(() => Math.random() - 0.5);
+        
+        // Combine them: Mandatory rooms first, then random others
+        const roomsForWeapons = [...mandatoryRooms, ...otherEligibleRooms];
+
         gameData.weapons.forEach((w, idx) => {
-            const rName = shuffledRooms[idx];
+            const rName = roomsForWeapons[idx];
             const rZone = roomZones.find(z => z.name === rName);
             if (rZone) {
-                // Precise positioning inside the top-left tile bounds of the room
+                // Precise positioning inside the room (top-left inner tile)
                 weaponPositions[w] = { 
                     x: rZone.x1 + 1, 
                     y: rZone.y1 + 1 
@@ -467,6 +476,7 @@
 </script>
 </body>
 </html>
+
 
 
 
