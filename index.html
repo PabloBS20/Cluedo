@@ -21,11 +21,13 @@
         
         .player-token { width: 40px; height: 40px; position: absolute; transform: translate(-50%, -50%); transition: 0.4s; border-radius: 50%; border: 2px solid #fff; background-position: center; background-size: cover; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 10;}
         
-        /* Weapons offset to display neatly when sharing tiles with players */
+        /* Offset weapons slightly so they don't perfectly overlap players on the same tile */
         .weapon-token { width: 22px; height: 22px; position: absolute; transform: translate(-90%, -90%); transition: 0.4s; border-radius: 4px; background: #555; border: 1px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 0 5px rgba(0,0,0,0.8); z-index: 15;}
         
-        .eliminated { opacity: 0.3; filter: grayscale(1); }
+        /* Room label styling */
         .room-label { position: absolute; color: rgba(255, 255, 255, 0.6); font-weight: bold; text-align: center; text-transform: uppercase; font-size: 0.9rem; pointer-events: none; z-index: 2; transform: translate(-50%, -50%); text-shadow: 2px 2px 4px #000; }
+        
+        .eliminated { opacity: 0.3; filter: grayscale(1); }
         
         button { padding: 10px; background: var(--accent-color); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: #000; }
         button:disabled { background: #555; cursor: not-allowed; color: #888; }
@@ -43,11 +45,6 @@
         .notepad-item:hover { background: #333; }
         .notepad-item.crossed { text-decoration: line-through; color: #777; background: #111; }
         .notepad-category { grid-column: span 2; color: var(--accent-color); border-bottom: 1px solid #444; margin-top: 5px; font-size: 0.85em; text-transform: uppercase; padding-bottom: 2px;}
-
-        /* Disprove System UI */
-        #disprove-modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 5000; flex-direction: column; align-items: center; justify-content: center; }
-        #disprove-content { background: var(--panel-bg); padding: 25px; border: 2px solid var(--accent-color); border-radius: 10px; text-align: center; max-width: 450px; }
-        #disprove-content button { margin: 5px; padding: 10px 20px; }
 
         /* End Screen Styles */
         #end-screen { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 4000; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
@@ -88,7 +85,7 @@
                 <h3 style="margin-top:0;">Suggestion</h3>
                 <select id="guess-suspect" style="width:100%; margin-bottom:5px;"></select>
                 <select id="guess-weapon" style="width:100%; margin-bottom:5px;"></select>
-                <button id="suggest-btn" onclick="makeSuggestion()" style="width:100%">Make Suggestion</button>
+                <button onclick="makeSuggestion()" style="width:100%">Make Suggestion</button>
             </div>
             <div class="section">
                 <h3 style="margin-top:0;">Detective Notebook</h3>
@@ -99,15 +96,11 @@
                 <div id="my-hand"></div>
             </div>
             <div class="section" style="margin-bottom: 5px;">
-                <button id="accuse-btn" style="background:red; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
+                <button style="background:red; color:white; width:100%" onclick="makeAccusation()">FINAL ACCUSATION</button>
                 <button id="end-turn-btn" onclick="endTurn()" style="background:#444; color:white; margin-top:5px; width:100%">End Turn</button>
             </div>
             <div id="log"></div>
         </div>
-    </div>
-
-    <div id="disprove-modal">
-        <div id="disprove-content"></div>
     </div>
 
     <div id="end-screen">
@@ -135,7 +128,7 @@
     const gameData = {
         suspects: ["Lenny", "Sideshow Bob", "Flanders", "Fat Tony", "Krusty", "Smithers"],
         weapons: ["Poisoned Donut", "Saxophone", "Knife", "Gun", "Candelabrum", "Book"],
-        rooms: ["Cafeteria", "2ºA", "Teacher's lounge", "ICT room", "Gym", "Library", "English department", "Hall", "Bathroom",]
+        rooms: ["Cafeteria", "2ºA", "Teacher's lounge", "ICT room", "Gym", "Library", "English department", "Hall", "Bathroom", ]
     };
 
     const diceFaces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
@@ -148,8 +141,9 @@
         { name: "Bathroom", x1: 17, y1: 20, x2: 23, y2: 24 },
     ];
 
+
     let roomPath = ""; let myChar = ""; let localState = {}; let currentRoll = 0; let hasMovedThisTurn = false;
-    let lastAlertTimestamp = 0; let boardRendered = false;
+    let lastAlertTimestamp = 0;
 
     function joinRoom() {
         const id = document.getElementById('room-id').value;
@@ -165,6 +159,7 @@
                 alert(localState.latestAlert.msg);
             }
             
+            // UI Routing updated to handle end screen
             if (localState.winner) {
                 showEndScreen();
             } else if (localState.started) { 
@@ -206,12 +201,7 @@
     }
 
     function hostInit() {
-        // FULLY RANDOMIZED CRIME
-        const solution = { 
-            suspect: gameData.suspects[Math.floor(Math.random() * gameData.suspects.length)], 
-            weapon: gameData.weapons[Math.floor(Math.random() * gameData.weapons.length)], 
-            room: gameData.rooms[Math.floor(Math.random() * gameData.rooms.length)] 
-        };
+        const solution = { suspect: "Smithers", weapon: "Book", room: "English department" };
         
         let sCards = gameData.suspects.filter(c => c !== solution.suspect).sort(() => Math.random() - 0.5);
         let wCards = gameData.weapons.filter(c => c !== solution.weapon).sort(() => Math.random() - 0.5);
@@ -236,7 +226,7 @@
             const rName = shuffledRooms[idx];
             const rZone = roomZones.find(z => z.name === rName);
             if (rZone) {
-                // Precise weapon placement: Just inside the top-left boundary of the assigned room
+                // Precise positioning inside the top-left tile bounds of the room
                 weaponPositions[w] = { 
                     x: rZone.x1 + 1, 
                     y: rZone.y1 + 1 
@@ -256,18 +246,13 @@
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('end-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'flex';
-        setupDropdowns(); 
-        if (!boardRendered) renderBoard(); 
-        updateTokens();
-        renderSidebar(); 
-        renderNotebook();
-        handleDisproveState();
+        setupDropdowns(); renderBoard(); renderSidebar(); renderNotebook();
     }
 
+    // Displays the final result screen
     function showEndScreen() {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'none';
-        document.getElementById('disprove-modal').style.display = 'none';
         document.getElementById('end-screen').style.display = 'flex';
 
         const title = document.getElementById('end-title');
@@ -276,25 +261,22 @@
 
         if (localState.winner === myChar) {
             title.textContent = "🎉 YOU WON! 🎉";
-            title.style.color = "#2ecc71";
+            title.style.color = "#2ecc71"; // Green
             sub.textContent = `You correctly guessed: ${sol.suspect} with the ${sol.weapon} in the ${sol.room}.`;
         } else if (localState.winner === 'none') {
             title.textContent = "💀 EVERYONE LOST 💀";
-            title.style.color = "#e74c3c";
+            title.style.color = "#e74c3c"; // Red
             sub.innerHTML = `All detectives were eliminated.<br>The correct answer was: <strong>${sol.suspect}</strong> with the <strong>${sol.weapon}</strong> in the <strong>${sol.room}</strong>.`;
         } else {
             title.textContent = "❌ YOU LOST ❌";
-            title.style.color = "#e74c3c";
+            title.style.color = "#e74c3c"; // Red
             sub.innerHTML = `<strong>${localState.winner}</strong> solved the mystery!<br>It was ${sol.suspect} with the ${sol.weapon} in the ${sol.room}.`;
         }
     }
 
     function renderBoard() {
-        boardRendered = true;
         const grid = document.getElementById('grid-overlay');
         grid.innerHTML = "";
-        
-        // Draw Cells
         for (let i = 0; i < 24 * 25; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
@@ -302,7 +284,7 @@
             cell.onclick = () => handleMove(x, y);
             grid.appendChild(cell);
         }
-        
+
         // Draw Precise Room Names
         roomZones.forEach(z => {
             const label = document.createElement('div');
@@ -314,6 +296,8 @@
             label.textContent = z.name;
             grid.appendChild(label);
         });
+
+        updateTokens();
     }
 
     function updateTokens() {
@@ -345,15 +329,9 @@
         const turnIdx = localState.turn || 0;
         const activeChar = characters[turnIdx].name;
         const isMyTurn = activeChar === myChar;
-        const isDisproving = !!localState.disproveInfo;
-
         document.getElementById('turn-indicator').textContent = isMyTurn ? "YOUR TURN" : `${activeChar}'s Turn`;
-        
-        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn || isDisproving;
-        document.getElementById('suggest-btn').disabled = !isMyTurn || isDisproving;
-        document.getElementById('end-turn-btn').disabled = !isMyTurn || isDisproving;
-        document.getElementById('accuse-btn').disabled = !isMyTurn || isDisproving;
-        
+        document.getElementById('roll-btn').disabled = !isMyTurn || hasMovedThisTurn;
+        document.getElementById('end-turn-btn').disabled = !isMyTurn;
         document.getElementById('my-hand').innerHTML = (localState.hands?.[myChar] || []).map(c => `<span class="card">${c}</span>`).join('');
         document.getElementById('log').innerHTML = (localState.logs || []).slice().reverse().map(l => `<div>> ${l}</div>`).join('');
     }
@@ -383,7 +361,7 @@
     }
 
     function handleMove(x, y) {
-        if (currentRoll === 0 || characters[localState.turn].name !== myChar || !!localState.disproveInfo) return;
+        if (currentRoll === 0 || characters[localState.turn].name !== myChar) return;
         const pos = localState.positions[myChar];
         if (Math.abs(pos.x - x) + Math.abs(pos.y - y) <= currentRoll) {
             db.ref(roomPath + '/positions/' + myChar).set({ x, y });
@@ -392,116 +370,27 @@
         }
     }
 
-    function getNextPlayerIdx(currentIdx) {
-        let next = (currentIdx + 1) % 4;
-        while (!localState.players?.[characters[next].name] || localState.players?.[characters[next].name]?.eliminated) {
-            next = (next + 1) % 4;
-            if (next === currentIdx) return -1; // No other active players found
-        }
-        return next;
-    }
-
     function makeSuggestion() {
         if (characters[localState.turn].name !== myChar) return alert("Not your turn!");
         const pos = localState.positions[myChar];
         const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2)?.name;
         if (!r) return alert("Must be in a room!");
-        
         const s = document.getElementById('guess-suspect').value;
         const w = document.getElementById('guess-weapon').value;
-        const suggestionMsg = `🚨 ${myChar} suggests: ${s} with the ${w} in the ${r}!`;
-        
-        let updates = {};
-        if (localState.positions[s]) updates[`positions/${s}`] = { x: pos.x, y: pos.y };
-        if (localState.weaponPositions && localState.weaponPositions[w]) updates[`weaponPositions/${w}`] = { x: pos.x, y: pos.y };
-        
-        const nextIdx = getNextPlayerIdx(localState.turn);
-        if (nextIdx !== -1) {
-            updates['disproveInfo'] = { suggester: myChar, suspect: s, weapon: w, room: r, targetIdx: nextIdx, status: 'waiting' };
-        } else {
-            addLog("No other players available to disprove.");
-        }
-        
-        updates['latestAlert'] = { msg: suggestionMsg, ts: Date.now() };
-        db.ref(roomPath).update(updates);
+        const suggestionMsg = `🚨 SUGGESTION: ${myChar} thinks it was ${s} with the ${w} in the ${r}!`;
+        if (localState.positions[s]) db.ref(roomPath + '/positions/' + s).set({ x: pos.x, y: pos.y });
+        if (localState.weaponPositions && localState.weaponPositions[w]) db.ref(roomPath + '/weaponPositions/' + w).set({ x: pos.x, y: pos.y });
         addLog(suggestionMsg);
+        db.ref(roomPath + '/latestAlert').set({ msg: suggestionMsg, ts: Date.now() });
     }
-
-    // DISPROVE CARD LOGIC
-    function handleDisproveState() {
-        const dp = localState.disproveInfo;
-        const modal = document.getElementById('disprove-modal');
-        const content = document.getElementById('disprove-content');
-
-        if (!dp) {
-            modal.style.display = 'none';
-            return;
-        }
-
-        modal.style.display = 'flex';
-        const targetName = characters[dp.targetIdx].name;
-
-        if (dp.status === 'waiting') {
-            if (targetName === myChar) {
-                const myHand = localState.hands[myChar] || [];
-                const matches = myHand.filter(c => c === dp.suspect || c === dp.weapon || c === dp.room);
-
-                let html = `<h3 style="color:var(--accent-color);">${dp.suggester} suggests:</h3>
-                            <p>${dp.suspect} with the ${dp.weapon} in the ${dp.room}.</p>`;
-                
-                if (matches.length === 0) {
-                    html += `<p style="color:#aaa;">You do not have any cards to disprove this.</p>
-                             <button style="background:#555; color:white;" onclick="passDisprove()">Pass</button>`;
-                } else {
-                    html += `<p>You must show one of these cards to ${dp.suggester}:</p>`;
-                    matches.forEach(m => { html += `<button onclick="submitDisprove('${m}')">${m}</button> `; });
-                }
-                content.innerHTML = html;
-            } else {
-                content.innerHTML = `<h3 style="color:#ccc;">Waiting for ${targetName} to disprove...</h3>
-                                     <p>${dp.suggester} suggested: ${dp.suspect}, ${dp.weapon}, ${dp.room}.</p>`;
-            }
-        } else if (dp.status === 'disproved') {
-            if (dp.suggester === myChar) {
-                content.innerHTML = `<h3 style="color:#2ecc71;">${dp.disprover} disproved your suggestion!</h3>
-                                     <p>They showed you: <span style="color:var(--accent-color); font-weight:bold; font-size:1.2rem;">${dp.shownCard}</span></p>
-                                     <button onclick="clearDisprove()">Close</button>`;
-            } else {
-                content.innerHTML = `<h3 style="color:#ccc;">${dp.disprover} disproved the suggestion!</h3>`;
-            }
-        } else if (dp.status === 'failed') {
-            if (dp.suggester === myChar) {
-                content.innerHTML = `<h3 style="color:#e74c3c;">No one could disprove your suggestion!</h3>
-                                     <button onclick="clearDisprove()">Close</button>`;
-            } else {
-                content.innerHTML = `<h3 style="color:#ccc;">No one could disprove the suggestion.</h3>`;
-            }
-        }
-    }
-
-    function passDisprove() {
-        const currentIdx = localState.disproveInfo.targetIdx;
-        const suggesterIdx = characters.findIndex(c => c.name === localState.disproveInfo.suggester);
-        let nextIdx = getNextPlayerIdx(currentIdx);
-
-        if (nextIdx === suggesterIdx || nextIdx === -1) {
-            db.ref(roomPath + '/disproveInfo/status').set('failed');
-            addLog(`No one could disprove ${localState.disproveInfo.suggester}'s suggestion.`);
-        } else {
-            db.ref(roomPath + '/disproveInfo/targetIdx').set(nextIdx);
-        }
-    }
-
-    function submitDisprove(cardName) {
-        db.ref(roomPath + '/disproveInfo').update({ status: 'disproved', disprover: myChar, shownCard: cardName });
-        addLog(`${myChar} disproved ${localState.disproveInfo.suggester}'s suggestion.`);
-    }
-
-    function clearDisprove() { db.ref(roomPath + '/disproveInfo').remove(); }
 
     function endTurn() {
         if (characters[localState.turn].name !== myChar) return;
-        let next = getNextPlayerIdx(localState.turn);
+        let next = (localState.turn + 1) % 4;
+        while (!localState.players?.[characters[next].name] || localState.players?.[characters[next].name]?.eliminated) {
+            next = (next + 1) % 4;
+            if (next === localState.turn) break;
+        }
         db.ref(roomPath).update({ turn: next });
         hasMovedThisTurn = false;
         document.getElementById('die1').textContent = "⚀";
@@ -537,6 +426,7 @@
         gameData.weapons.forEach(i => w.innerHTML += `<option>${i}</option>`);
     }
 
+    // Updated logic to log the winner rather than just dropping the game state
     function makeAccusation() {
         const pos = localState.positions[myChar];
         const r = roomZones.find(z => pos.x >= z.x1 && pos.x <= z.x2 && pos.y >= z.y1 && pos.y <= z.y2)?.name;
@@ -545,13 +435,16 @@
         const w = document.getElementById('guess-weapon').value;
         
         if (s === localState.solution.suspect && w === localState.solution.weapon && r === localState.solution.room) {
+            // Found the solution
             db.ref(roomPath).update({ started: false, winner: myChar, logs: [`${myChar} WON!`] });
         } else {
+            // Eliminated
             db.ref(roomPath + '/players/' + myChar + '/eliminated').set(true);
             let active = 0;
             for (let p in localState.players) { if (p !== myChar && !localState.players[p].eliminated) active++; }
             
             if (active === 0) {
+                // Game over, everyone eliminated
                 db.ref(roomPath).update({ started: false, winner: "none" });
             } else { 
                 alert("WRONG ACCUSATION! You are eliminated."); 
@@ -568,6 +461,7 @@
 </script>
 </body>
 </html>
+
 
 
 
