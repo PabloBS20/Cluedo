@@ -220,26 +220,23 @@
         let remaining = [...sCards, ...wCards, ...rCards].sort(() => Math.random() - 0.5);
         remaining.forEach((card, idx) => hands[players[idx % players.length]].push(card));
         
-       let weaponPositions = {};
+        // Define specific rooms for weapons as requested
+        const targetRooms = ["Cafeteria", "2ºA", "Teacher's lounge", "ICT room", "Hall"];
+        const shuffledTargets = targetRooms.sort(() => Math.random() - 0.5);
         
-        // Exclude Gym and Library, and ensure Cafeteria and Hall are included
-        const mandatoryRooms = ["Cafeteria", "Hall"];
-        const otherEligibleRooms = gameData.rooms.filter(r => 
-            !mandatoryRooms.includes(r) && r !== "Gym" && r !== "Library"
-        ).sort(() => Math.random() - 0.5);
+        let weaponPositions = {};
         
-        // Combine them: Mandatory rooms first, then random others
-        const roomsForWeapons = [...mandatoryRooms, ...otherEligibleRooms];
+        // Hardcode the Book to the English department
+        const englishDept = roomZones.find(z => z.name === "English department");
+        weaponPositions["Book"] = { x: englishDept.x1 + 1, y: englishDept.y1 + 1 };
 
-        gameData.weapons.forEach((w, idx) => {
-            const rName = roomsForWeapons[idx];
+        // Distribute the other 5 weapons to the other 5 requested rooms
+        const otherWeapons = gameData.weapons.filter(w => w !== "Book");
+        otherWeapons.forEach((w, idx) => {
+            const rName = shuffledTargets[idx];
             const rZone = roomZones.find(z => z.name === rName);
             if (rZone) {
-                // Precise positioning inside the room (top-left inner tile)
-                weaponPositions[w] = { 
-                    x: rZone.x1 + 1, 
-                    y: rZone.y1 + 1 
-                };
+                weaponPositions[w] = { x: rZone.x1 + 1, y: rZone.y1 + 1 };
             }
         });
 
@@ -476,6 +473,7 @@
 </script>
 </body>
 </html>
+
 
 
 
